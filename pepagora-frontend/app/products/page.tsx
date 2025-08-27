@@ -6,6 +6,7 @@ import axios from 'axios';
 import axiosInstance from '../../lib/axiosInstance';
 import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-toastify';
+import RichTextEditor from "@/components/RichTextEditor"; // ✅ import it
 
 // --- ICONS ---
 import { MdImageNotSupported, MdSearch } from "react-icons/md";
@@ -27,11 +28,12 @@ type Subcategory = {
 type Product = {
   _id: string;
   name: string;
-  mappedParent: string;
+  mappedParent?: string;
   metaTitle?: string;
   metaKeyword?: string;
   metaDescription?: string;
   imageUrl?: string;
+  description?: string;
 };
 
 type TokenPayload = {
@@ -47,6 +49,19 @@ export default function ProductsPage() {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [description, setDescription] = useState<string>("");
+
+  // State for new product form
+  const [newProduct, setNewProduct] = useState<Partial<Product>>({
+    name: "",
+    metaTitle: "",
+    metaKeyword: "",
+    metaDescription: "",
+    description: "",
+    imageUrl: "",
+    mappedParent: "",
+  });
+
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -59,6 +74,20 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (productToEdit) {
+      setDescription(productToEdit.description || "");
+    }
+  }, [productToEdit]);
+
+  useEffect(() => {
+    if (isAddModalOpen) {
+      setDescription("");
+    }
+  }, [isAddModalOpen]);
+
+
 
 
   // --- FETCH PRODUCTS ---
@@ -83,7 +112,9 @@ export default function ProductsPage() {
   const fetchSubcategories = async () => {
     try {
       const res = await axiosInstance.get(`/subcategories`);
-      setSubcategories(res.data);
+
+      console.log("gfvhbjn",)
+      setSubcategories(res.data.data.data);
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch subcategories");
@@ -91,17 +122,30 @@ export default function ProductsPage() {
   };
 
   // --- ADD PRODUCT ---
-  const handleAddProduct = async (newProduct: Partial<Product>) => {
-    try {
-      await axiosInstance.post(`/products`, newProduct);
-      toast.success("Product added successfully!");
-      setIsAddModalOpen(false);
-      fetchProducts(); // refresh list
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to add product");
-    }
-  };
+const handleAddProduct = async (newProduct: Partial<Product>) => {
+  try {
+    console.log("Submitting new product:", newProduct);
+
+    await axiosInstance.post("/products", {
+      name: newProduct.name, // ✅ required
+      mappedParent: newProduct.mappedParent, // ✅ must be ObjectId
+      // imageUrl: newProduct.imageUrl || undefined, // must be full URL
+      metaTitle: newProduct.metaTitle || undefined,
+      metaKeyword: newProduct.metaKeyword || undefined,
+      metaDescription: newProduct.metaDescription || undefined,
+      description: newProduct.description || undefined,
+    });
+
+    toast.success("Product added successfully!");
+    setIsAddModalOpen(false);
+    fetchProducts();
+  } catch (err: any) {
+    console.error("Error adding product:", err.response?.data || err.message);
+    toast.error(err.response?.data?.message || "Failed to add product");
+  }
+};
+
+
 
   // --- UPDATE PRODUCT ---
   const handleSaveEdit = async (updatedProduct: Product) => {
@@ -109,11 +153,12 @@ export default function ProductsPage() {
       // Build only the fields backend expects
       const payload = {
         name: updatedProduct.name,
-        // mappedParent: updatedProduct.mappedParent,   // required if backend uses it
+        mappedParent: updatedProduct.mappedParent,   // required if backend uses it
         metaTitle: updatedProduct.metaTitle,
         metaKeyword: updatedProduct.metaKeyword,
         metaDescription: updatedProduct.metaDescription,
         imageUrl: updatedProduct.imageUrl,
+        description
 
       };
 
@@ -160,233 +205,258 @@ export default function ProductsPage() {
         <div className="mx-auto max-w-7xl space-y-6">
 
           {/* --- Add Product Modal --- */}
+          {/* ✅ Add Product Modal */}
           {isAddModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-              <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-lg">
-                <h2 className="text-lg font-semibold mb-4">Add Product</h2>
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
+            <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl flex flex-col max-h-[90vh]">
 
-                    const formData = new FormData(e.currentTarget);
-                    const newProduct = {
-                      name: formData.get("name") as string,
-                      mappedParent: formData.get("subcategoryId") as string,
-                      metaTitle: formData.get("metaTitle") as string,
-                      metaKeyword: formData.get("metaKeyword") as string,
-                      metaDescription: formData.get("metaDescription") as string,
-                      imageUrl: formData.get("imageUrl") as string,
-                    };
+                {/* Header */}
+                <div className="flex justify-between items-center p-4 border-b">
+                  <h2 className="text-xl font-semibold text-gray-800">Add New Product</h2>
+                  <button
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    &times;
+                  </button>
+                </div>
 
-                    try {
-                      await axiosInstance.post("/products", newProduct);
-                      toast.success("Product added successfully!");
-                      setIsAddModalOpen(false);
-                      fetchProducts(); // refresh list
-                    } catch (err) {
-                      console.error(err);
-                      toast.error("Failed to add product");
-                    }
-                  }}
-                  className="space-y-4"
-                >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Product Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      className="w-full rounded-lg border px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Subcategory</label>
-                    <select
-                      name="subcategoryId"
-                      required
-                      className="w-full rounded-lg border px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500"
-                    >
-                      {products.map((s) => (
-                        <option key={s._id} value={s._id}>
-                          {s.name}
+                {/* ✅ Scrollable Body */}
+                <div className="overflow-y-auto p-6 space-y-6 flex-1">
+
+                  {/* 2-column grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    {/* Product Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Product Name
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.name}
+                        onChange={(e) =>
+                          setNewProduct({ ...newProduct, name: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* mapped Parent */}
+                    <select name="mappedParent" required className="w-full rounded-lg border px-3" onChange={(e) =>
+                      setNewProduct({ ...newProduct, mappedParent: e.target.value })
+                    }>
+                      <option value="">-- Select Category --</option>
+                      {subcategories.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.sub_cat_name} 
                         </option>
                       ))}
                     </select>
+
+                    {/* Meta Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Meta Title
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.metaTitle}
+                        onChange={(e) =>
+                          setNewProduct({ ...newProduct, metaTitle: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Meta Keyword */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Meta Keyword
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.metaKeyword}
+                        onChange={(e) =>
+                          setNewProduct({ ...newProduct, metaKeyword: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
+
+                  {/* ✅ Textarea + RichTextEditor in scrollable wrapper */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Meta Title</label>
-                    <input
-                      type="text"
-                      name="metaTitle"
-                      className="w-full rounded-lg border px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Meta Keywords</label>
-                    <input
-                      type="text"
-                      name="metaKeyword"
-                      className="w-full rounded-lg border px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Meta Description</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Meta Description
+                    </label>
                     <textarea
-                      name="metaDescription"
+                      value={newProduct.metaDescription}
+                      onChange={(e) =>
+                        setNewProduct({ ...newProduct, metaDescription: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                       rows={3}
-                      className="w-full rounded-lg border px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+
+                  {/* Rich Text Editor */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Image URL</label>
-                    <input
-                      type="text"
-                      name="imageUrl"
-                      className="w-full rounded-lg border px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <div className="max-h-60 overflow-y-auto border rounded-lg p-2">
+                      <RichTextEditor
+                        value={newProduct.description || ""}
+                        onChange={(value) =>
+                          setNewProduct({ ...newProduct, description: value })
+                        }
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  <div className="flex justify-end gap-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddModalOpen(false)}
-                      className="rounded-lg border px-4 py-2 hover:bg-gray-100"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white shadow hover:bg-blue-700"
-                    >
-                      <LuPlus /> Create
-                    </button>
-                  </div>
-                </form>
-
+                {/* ✅ Sticky Footer */}
+                <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
+                  <button
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleAddProduct(newProduct)}
+                    className="px-5 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                  >
+                    Add Product
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* --- Edit Product Modal --- */}
+
+          {/* ---------------- EDIT PRODUCT MODAL ---------------- */}
+          {/* ✅ Edit Product Modal */}
           {productToEdit && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-              <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-lg">
-                <h2 className="text-lg font-semibold mb-4">Edit Product</h2>
-                <form
-  onSubmit={async (e) => {
-    e.preventDefault();
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-40">
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl flex flex-col max-h-[90vh]">
 
-    const formData = new FormData(e.currentTarget);
+                {/* Header */}
+                <div className="flex justify-between items-center p-4 border-b">
+                  <h2 className="text-xl font-semibold text-gray-800">Edit Product</h2>
+                  <button
+                    onClick={() => setProductToEdit(null)}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    &times;
+                  </button>
+                </div>
 
-    const updatedProduct: Product = {
-      ...productToEdit,
-      name: (formData.get("name") as string) || productToEdit.name,  // ✅ fallback
-      mappedParent: (formData.get("mappedParent") as string) || productToEdit.mappedParent,
-      metaTitle: formData.get("metaTitle") as string,
-      metaKeyword: formData.get("metaKeyword") as string,
-      metaDescription: formData.get("metaDescription") as string,
-      imageUrl: formData.get("imageUrl") as string,
-    };
+                {/* ✅ Scrollable Body */}
+                <div className="overflow-y-auto p-6 space-y-6 flex-1">
 
-    await handleSaveEdit(updatedProduct);
-  }}
-  className="space-y-4"
->
-  <div>
-    <label className="block text-sm font-medium">Product Name</label>
-    <input
-      type="text"
-      name="name"                         // ✅ must be here
-      defaultValue={productToEdit.name}
-      required                            // ✅ ensure it can’t be empty
-      className="w-full rounded-lg border px-3 py-2"
-    />
-  </div>
+                  {/* 2-column grid on desktop, 1-col on mobile */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-  {/* <div>
-    <label className="block text-sm font-medium">Subcategory</label>
-    <select
-      name="mappedParent"                  // ✅ must match backend
-      defaultValue={productToEdit.mappedParent}
-      required
-      className="w-full rounded-lg border px-3 py-2"
-    >
-      {subcategories.map((s) => (
-        <option key={s._id} value={s._id}>
-          {s.sub_cat_name}
-        </option>
-      ))}
-    </select>
-  </div> */}
+                    {/* Product Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Product Name
+                      </label>
+                      <input
+                        type="text"
+                        value={productToEdit.name}
+                        onChange={(e) =>
+                          setProductToEdit({ ...productToEdit, name: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-  {/* metaTitle */}
-  <div>
-    <label className="block text-sm font-medium">Meta Title</label>
-    <input
-      type="text"
-      name="metaTitle"
-      defaultValue={productToEdit.metaTitle}
-      className="w-full rounded-lg border px-3 py-2"
-    />
-  </div>
+                    {/* Meta Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Meta Title
+                      </label>
+                      <input
+                        type="text"
+                        value={productToEdit.metaTitle}
+                        onChange={(e) =>
+                          setProductToEdit({ ...productToEdit, metaTitle: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-  {/* metaKeyword */}
-  <div>
-    <label className="block text-sm font-medium">Meta Keywords</label>
-    <input
-      type="text"
-      name="metaKeyword"
-      defaultValue={productToEdit.metaKeyword}
-      className="w-full rounded-lg border px-3 py-2"
-    />
-  </div>
+                    {/* Meta Keyword */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Meta Keyword
+                      </label>
+                      <input
+                        type="text"
+                        value={productToEdit.metaKeyword}
+                        onChange={(e) =>
+                          setProductToEdit({ ...productToEdit, metaKeyword: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
 
-  {/* metaDescription */}
-  <div>
-    <label className="block text-sm font-medium">Meta Description</label>
-    <textarea
-      name="metaDescription"
-      defaultValue={productToEdit.metaDescription}
-      className="w-full rounded-lg border px-3 py-2"
-      rows={3}
-    />
-  </div>
+                  {/* ✅ Textarea + RichTextEditor in scrollable wrapper */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Meta Description
+                    </label>
+                    <textarea
+                      value={productToEdit.metaDescription}
+                      onChange={(e) =>
+                        setProductToEdit({ ...productToEdit, metaDescription: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                    />
+                  </div>
 
-  {/* imageUrl */}
-  <div>
-    <label className="block text-sm font-medium">Image URL</label>
-    <input
-      type="text"
-      name="imageUrl"
-      defaultValue={productToEdit.imageUrl}
-      className="w-full rounded-lg border px-3 py-2"
-    />
-  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <div className="max-h-60 overflow-y-auto border rounded-lg p-2">
+                      <RichTextEditor
+                        value={productToEdit.description || ""}
+                        onChange={(value) =>
+                          setProductToEdit({ ...productToEdit, description: value })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
 
-  <div className="flex justify-end gap-2 pt-2">
-    <button
-      type="button"
-      onClick={() => setProductToEdit(null)}
-      className="rounded-lg border px-4 py-2"
-    >
-      Cancel
-    </button>
-    <button
-      type="submit"
-      className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700"
-    >
-      <LuSave /> Save
-    </button>
-  </div>
-</form>
-
+                {/* ✅ Sticky Footer */}
+                <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
+                  <button
+                    onClick={() => setProductToEdit(null)}
+                    className="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleSaveEdit(productToEdit)}
+                    className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Save Changes
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
           {/* --- Delete Confirmation Modal --- */}
           {productToDelete && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center /40 backdrop-blur-sm">
               <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
                 <h2 className="text-lg font-semibold mb-2">Confirm Deletion</h2>
                 <p className="text-gray-600 mb-4">

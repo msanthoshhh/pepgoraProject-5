@@ -33,4 +33,8 @@ export class CreateProductDto {
   @IsUrl({}, { message: 'Image URL must be a valid URL' })
   // @IsString()
   imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

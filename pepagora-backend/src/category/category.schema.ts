@@ -25,28 +25,8 @@ export class Category extends Document {
   @Prop({ type: [Types.ObjectId], ref: 'Category', default: [] })
   mappedChildren?: Types.ObjectId[];
 
-
-  //   @Prop()
-  // description?: string;
-
-  // // ✅ NEW FIELD: List of product names (strings)
-  // @Prop({ type: [String], default: [] })
-  // products?: string[];
-
-   @Prop()
-  paragraph: string;
-
-  // Use an array of objects to store the link text and its corresponding URL.
-  @Prop([
-    {
-      text: String,
-      url: String, // Assuming each link has a URL.
-    },
-  ])
-  links: {
-    text: string;
-    url: string;
-  }[];
+  @Prop({ type: String })
+  description: string;
 }
 
 export const CategorySchema = SchemaFactory.createForClass(Category);

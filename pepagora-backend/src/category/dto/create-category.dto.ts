@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsOptional, IsString,IsMongoId } from 'class-validator';
 
 export class CreateCategoryDto {
   @IsString()
@@ -28,12 +28,13 @@ export class CreateCategoryDto {
   @IsString()
   imageUrl?: string;
 
-  @IsOptional()
+   @IsOptional()
   @IsString()
   description?: string;
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  products?: string[];
+  @IsMongoId({ each: true })   // ✅ Ensures every element is a valid ObjectId
+  mappedChildren?: string[];
+
 }

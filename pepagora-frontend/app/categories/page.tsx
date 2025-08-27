@@ -25,6 +25,7 @@ type Category = {
   metaDescription?: string;
   imageUrl?: string;
   metaChildren?: string[];
+  description?: string;
 };
 
 type TokenPayload = {
@@ -53,7 +54,6 @@ export default function CategoriesPage() {
   const [metaDescription, setMetaDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [freeText, setFreeText] = useState('');
-  const [productList, setProductList] = useState<string[]>([]);
 
 
   // ---- Edit form ----
@@ -62,6 +62,7 @@ export default function CategoriesPage() {
     metaTitle: '',
     metaKeyword: '',
     metaDescription: '',
+    description: ''
   });
 
   // ---- Pagination ----
@@ -137,6 +138,7 @@ export default function CategoriesPage() {
       metaTitle: cat.metaTitle || '',
       metaKeyword: cat.metaKeyword || '',
       metaDescription: cat.metaDescription || '',
+      description: cat.description || ''
     });
     setShowEditModal(true);
   };
@@ -149,6 +151,8 @@ export default function CategoriesPage() {
         metaTitle: editForm.metaTitle,
         metaDescription: editForm.metaDescription,
         metaKeyword: editForm.metaKeyword,
+        description: editForm.description,
+
       };
       const res = await axiosInstance.put(`/categories/${selectedCategory._id}`, payload);
       if (res.status === 200) {
@@ -182,8 +186,8 @@ export default function CategoriesPage() {
         metaDescription,
         metaKeyword,
         imageUrl,
-        description: freeText,
-        products: productList,
+        description: freeText
+
       };
       const res = await axiosInstance.post('/categories', payload);
       if (res.status === 201) {
@@ -273,8 +277,6 @@ export default function CategoriesPage() {
                     <th className="p-3">Meta Title</th>
                     <th className="p-3">Meta Keywords</th>
                     <th className="p-3">Meta Description</th>
-                    <th className="p-3">Description</th>
-
                     {!isManagerViewOnly && <th className="p-3 text-center">Actions</th>}
                   </tr>
                 </thead>
@@ -348,7 +350,6 @@ export default function CategoriesPage() {
                             <span className="text-gray-400">-</span>
                           )}
                         </td>
-                        
 
                         {/* Actions */}
                         {!isManagerViewOnly && (
@@ -372,7 +373,6 @@ export default function CategoriesPage() {
                             </div>
                           </td>
                         )}
-
                       </tr>
                     ))}
                 </tbody>
@@ -420,31 +420,48 @@ export default function CategoriesPage() {
       <AnimatePresence>
         {showCreateModal && (
           <Modal onClose={() => setShowCreateModal(false)} title="Add Category">
-            <form onSubmit={handleCreate} className="space-y-4">
-              <Input label="Category Name" value={name} onChange={setName} required />
-              <Input label="Meta Title" value={metaTitle} onChange={setMetaTitle} />
-              <Input label="Meta Keywords" value={metaKeyword} onChange={setMetaKeyword} />
-              <Textarea label="Meta Description" value={metaDescription} onChange={setMetaDescription} rows={3} />
-              <Input label="Image URL" value={imageUrl} onChange={setImageUrl} />
-              {/* <label>Free Text</label>
-              <ReactTextEditor value={freeText} onChange={setFreeText}/> */}
-              <label>Product Names</label>
-              <Input
-                label="Product List"
-                value={productList.join(', ')}
-                onChange={(v) => setProductList(v.split(',').map(p => p.trim()))}
+            <form onSubmit={handleCreate} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input label="Category Name" value={name} onChange={setName} required />
+                <Input label="Image URL" value={imageUrl} onChange={setImageUrl} />
+                <Input label="Meta Title" value={metaTitle} onChange={setMetaTitle} />
+                <Input label="Meta Keywords" value={metaKeyword} onChange={setMetaKeyword} />
+              </div>
+
+              <Textarea
+                label="Meta Description"
+                value={metaDescription}
+                onChange={setMetaDescription}
+                rows={3}
               />
 
+              {/* Rich Text Editor with max height */}
+              <label className="block text-sm">
+                <span className="mb-1 block text-gray-700">Description</span>
+                <div className="max-h-[250px] overflow-y-auto border rounded-xl">
+                  <ReactTextEditor value={freeText} onChange={setFreeText} />
+                </div>
+              </label>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="rounded-lg border px-4 py-2">
+              {/* Footer Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="rounded-lg border px-4 py-2 text-gray-600 hover:bg-gray-50"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-white shadow-sm hover:bg-blue-700"
+                >
                   <LuPlus /> Create
                 </button>
               </div>
             </form>
+
+
           </Modal>
         )}
 
@@ -456,6 +473,15 @@ export default function CategoriesPage() {
               <Input label="Meta Keywords" value={editForm.metaKeyword} onChange={(v) => setEditForm({ ...editForm, metaKeyword: v })} />
               <Textarea label="Meta Description" value={editForm.metaDescription} onChange={(v) => setEditForm({ ...editForm, metaDescription: v })} rows={3} />
 
+              {/* ✅ Add Rich Text Editor for Editing */}
+              <label className="block text-sm">
+                <span className="mb-1 block text-gray-700">Description</span>
+                <ReactTextEditor
+                  value={editForm.description}
+                  onChange={(v) => setEditForm({ ...editForm, description: v })}
+                />
+              </label>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button onClick={() => setShowEditModal(false)} className="rounded-lg border px-4 py-2">
                   Cancel
@@ -466,6 +492,7 @@ export default function CategoriesPage() {
               </div>
             </div>
           </Modal>
+
         )}
 
         {showDeleteModal && selectedCategory && (
@@ -507,17 +534,21 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 20, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-        className="relative z-[101] w-full max-w-lg rounded-2xl border bg-white p-5 shadow-xl"
+        className="relative z-[101] w-full max-w-2xl rounded-2xl border bg-white shadow-xl flex flex-col max-h-[90vh]"
       >
-        <div className="mb-3 flex items-start justify-between gap-4">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-500 hover:bg-gray-100">✕</button>
         </div>
-        {children}
+
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-5">{children}</div>
       </motion.div>
     </motion.div>
   );
 }
+
 
 function Input({ label, value, onChange, required }: { label: string; value: string; onChange: (v: string) => void; required?: boolean }) {
   return (

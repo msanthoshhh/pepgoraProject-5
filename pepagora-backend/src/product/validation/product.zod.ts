@@ -9,6 +9,7 @@ export const createProductSchema = z.object({
   metaTitle: z.string().optional(),
   metaKeyword: z.string().optional(),
   metaDescription: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export type CreateProductDto = z.infer<typeof createProductSchema>;

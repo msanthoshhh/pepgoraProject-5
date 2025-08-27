@@ -27,6 +27,7 @@ export const createSubcategorySchema = z.object({
     .url({ message: 'Image URL must be a valid URL' })
     .optional(),
     mappedChildren: z.array(objectIdSchema).optional(),
+  description: z.string().optional(),
 });
 
 // TypeScript type inferred from Zod

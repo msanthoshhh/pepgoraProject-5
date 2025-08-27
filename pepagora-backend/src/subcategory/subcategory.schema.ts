@@ -32,7 +32,8 @@ export class Subcategory extends Document {
 
  @Prop()
   sub_cat_img_url?: string;
-  
+  @Prop({ type: String })
+  description?: string;
 }
 
 export const SubcategorySchema = SchemaFactory.createForClass(Subcategory);

@@ -15,6 +15,7 @@ import { MdImageNotSupported } from "react-icons/md";
 // --- Utils ---
 import { getPaginationRange } from '@/components/GetPage';
 import Sidebar from '@/components/Sidebar';
+import RichTextEditor from '@/components/RichTextEditor';
 
 // --- Types ---
 type Category = {
@@ -30,6 +31,7 @@ type SubCategory = {
   metaTitle?: string;
   metaKeyword?: string;
   metaDescription?: string;
+  description?: string;
 };
 
 type TokenPayload = {
@@ -45,6 +47,7 @@ export default function SubcategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [freeText, setFreeText] = useState<string>('');
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -131,6 +134,7 @@ export default function SubcategoriesPage() {
         metaKeyword: formData.get("metaKeyword"),
         metaDescription: formData.get("metaDescription"),
         sub_cat_img_url: formData.get("sub_cat_img_url"),
+        freeText: freeText,
       };
       await axiosInstance.post('/subcategories', payload);
       toast.success("Subcategory added successfully!");
@@ -152,6 +156,7 @@ export default function SubcategoriesPage() {
         metaKeyword: updatedSub.metaKeyword,
         metaDescription: updatedSub.metaDescription,
         sub_cat_img_url: updatedSub.sub_cat_img_url,
+        freeText: freeText,
       };
       await axiosInstance.put(`/subcategories/${updatedSub._id}`, payload);
       toast.success("Subcategory updated successfully!");
@@ -352,7 +357,7 @@ export default function SubcategoriesPage() {
       {/* --- Add Modal --- */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-4">Add Subcategory</h2>
             <form
               onSubmit={(e) => {
@@ -399,6 +404,7 @@ export default function SubcategoriesPage() {
                 placeholder="Image URL"
                 className="w-full rounded-lg border px-3 py-2"
               />
+              <RichTextEditor value={freeText} onChange = {setFreeText} />
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -422,7 +428,7 @@ export default function SubcategoriesPage() {
       {/* --- Edit Modal --- */}
       {subcategoryToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-4">Edit Subcategory</h2>
             <form
               onSubmit={(e) => {
@@ -483,15 +489,7 @@ export default function SubcategoriesPage() {
                 }
                 className="w-full rounded-lg border px-3 py-2"
               />
-              <input
-                type="text"
-                name="sub_cat_img_url"
-                value={subcategoryToEdit.sub_cat_img_url || ''}
-                onChange={(e) =>
-                  setSubcategoryToEdit({ ...subcategoryToEdit, sub_cat_img_url: e.target.value })
-                }
-                className="w-full rounded-lg border px-3 py-2"
-              />
+              <RichTextEditor value={freeText} onChange={setFreeText} />
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"

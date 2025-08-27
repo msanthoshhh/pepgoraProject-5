@@ -16,16 +16,19 @@ export class Product extends Document {
  @Prop()
  liveUrl?:string;  
   @Prop()
-  metaTitle: string;
+  metaTitle?: string;
 
   @Prop()
-  metaKeyword: string;
+  metaKeyword?: string;
 
   @Prop()
-  metaDescription: string;
+  metaDescription?: string;
   
  @Prop()
   imageUrl?: string;
+
+  @Prop({ type: String })
+  description?: string;
   
 
 }

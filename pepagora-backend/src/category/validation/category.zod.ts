@@ -38,7 +38,6 @@ export const createCategorySchema = z.object({
   description: z.string().optional(),
 
   // ✅ New: Array of product names
-  products: z.array(z.string()).optional(),
 
 });
 

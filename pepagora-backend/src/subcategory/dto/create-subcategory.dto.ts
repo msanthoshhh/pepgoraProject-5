@@ -35,4 +35,8 @@ export class CreateSubcategoryDto {
     @IsArray()
     @IsString({ each: true })
     mappedChildren?: string[];
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

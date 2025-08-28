@@ -21,6 +21,9 @@ export class SubcategoryService {
       throw new BadRequestException('Failed to create subcategory');
     }
   }
+ async findAllCount() {
+  return await this.subcategoryModel.countDocuments().exec();
+}
 
   // async findAll() {
   //   return this.subcategoryModel.find().populate('category').exec();

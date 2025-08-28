@@ -45,6 +45,8 @@ export default function Dashboard() {
   const [categories,setCategories]=useState<Category[]>([])
   const [subcategories,setSubcategories]=useState<Subategory[]>([])
   const [products,setProducts]=useState<Product[]>([])
+  const [subCategoryCount, setSubCategoryCount] = useState<number>(0);
+  const [productCount, setProductCount] = useState<number>(0);
 
   //   const logOut = () => {
 
@@ -100,13 +102,44 @@ const fetch = async () => {
     } finally {
       setLoading(false);
     }
+
+       try {
+  const res = await axiosInstance.get('/subcategories/count');
+
+  // console.log("response", res.data.count);
+
+  const count = res.data.data.count; // fallback to 0 if not present
+  console.log("Subcategory Count:", count);
+
+  setSubCategoryCount(count);
+} catch (err) {
+  console.error('Error fetching subcategory count:', err);
+  setSubCategoryCount(0); // reset to 0 on error
+} finally {
+  setLoading(false);
+}
+   try {
+  const res = await axiosInstance.get('/products/count');
+
+  // console.log("response", res.data.count);
+
+  const count = res.data.data.count; // fallback to 0 if not present
+  console.log("Product Count:", count);
+
+  setProductCount(count);
+} catch (err) {
+  console.error('Error fetching product count:', err);
+  setProductCount(0); // reset to 0 on error
+} finally {
+  setLoading(false);
+}
   };
   useEffect(()=>{
     fetch()
   },[])
   const categoriesCount = categories.length;
-  const subCategoriesCount = subcategories.length;
-  const productsCount = products.length;
+  const subCategoriesCount = subCategoryCount;
+  const productsCount = productCount;
   return (
     <>
       <Sidebar />

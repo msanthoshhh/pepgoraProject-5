@@ -332,7 +332,7 @@ export default function CategoriesPage() {
                         {/* Meta Keywords */}
                         <td className="p-3 align-top">
                           {cat.metaKeyword ? (
-                            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700">
+                            <span className="inline-flex items-center px-2 py-0.5 text-xs text-gray-700">
                               {cat.metaKeyword}
                             </span>
                           ) : (

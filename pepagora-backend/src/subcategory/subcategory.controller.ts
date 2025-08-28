@@ -37,6 +37,15 @@ export class SubcategoryController {
   // findAll() {
   //   return this.subcategoryService.findAll();
   // }
+  @Get('/count')
+async findAllCount() {
+  const count = await this.subcategoryService.findAllCount();
+  console.log(count);
+  return {
+    message: "Subcategory count fetched successfully",
+    count,
+  };
+}
 
   
   @Get()

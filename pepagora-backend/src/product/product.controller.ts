@@ -31,6 +31,17 @@ export class ProductController {
   //   return this.productService.findAll();
   // }
 
+    @Get('/count')
+async findAllCount() {
+  const count = await this.productService.findAllCount();
+  console.log(count);
+  return {
+    message: "Product count fetched successfully",
+    count,
+  };
+}
+
+
    
     @Get()
     @Roles('admin', 'pepagora_manager', 'category_manager')

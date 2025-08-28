@@ -21,6 +21,7 @@ export class ProductService {
     }
   }
 
+
   // async findAll() {
   //   return this.productModel.find().populate('subcategory').exec();
   // }
@@ -58,6 +59,10 @@ export class ProductService {
     throw new BadRequestException('Failed to fetch categories');
   }
 }
+
+    async findAllCount() {
+    return await this.productModel.countDocuments().exec();
+  }
 
 
   async findOne(id: string) {

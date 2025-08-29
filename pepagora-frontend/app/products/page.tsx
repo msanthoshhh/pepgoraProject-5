@@ -253,7 +253,7 @@
 //                         </option>
 //                       ))}
 //                     </select>
-                    
+
 
 //                     {/* Meta Title */}
 //                     <div>
@@ -684,6 +684,8 @@ import { TbEdit } from 'react-icons/tb';
 import { RiDeleteBin6Line } from 'react-icons/ri';
 import { LuPlus } from 'react-icons/lu';
 import { AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'next/navigation';
+import FilterSidebar from '@/components/FilterSideBar';
 
 type Product = {
   _id: string;
@@ -696,9 +698,20 @@ type Product = {
   description?: string;
 };
 
+type Category = {
+  _id: string;
+  main_cat_name: string;
+  metaTitle?: string;
+  metaKeyword?: string;
+  metaDescription?: string;
+  imageUrl?: string;
+  description?: string;
+}
 type Subcategory = {
   _id: string;
   sub_cat_name: string;
+  mappedParent?: string;
+
 };
 
 type TokenPayload = {
@@ -722,13 +735,24 @@ function SkeletonRow() {
   );
 }
 
+
+
+
+
 export default function ProductsPage() {
   const router = useRouter();
 
   // data
   const [products, setProducts] = useState<Product[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // filter selections
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState<Subcategory[]>([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
+
 
   // paging & search
   const [page, setPage] = useState<number>(1);
@@ -758,6 +782,53 @@ export default function ProductsPage() {
   const [formImageUrl, setFormImageUrl] = useState('');
   const [formDescription, setFormDescription] = useState('');
 
+
+  const searchParams = useSearchParams();
+
+  const categoryId = searchParams.get("category");
+  const subcategoryId = searchParams.get("subcategory");
+
+  // useEffect(() => {
+  //   const fetchProducts = async () => {
+  //     try {
+  //       let url = "/products"; // default: all products
+
+  //       if (subcategoryId) {
+  //         url = `/products/by-subcategory/${subcategoryId}`;
+  //       } else if (categoryId) {
+  //         url = `/products/by-category/${categoryId}`;
+  //       }
+
+  //       const res = await axiosInstance.get(url);
+  //       setProducts(res.data);
+  //     } catch (err) {
+  //       console.error(err);
+  //     }
+  //   };
+
+  //   fetchProducts();
+  // }, [categoryId, subcategoryId]);
+
+
+  // when categories change, update filtered subcategories
+  useEffect(() => {
+    if (selectedCategories.length === 0) {
+      setFilteredSubcategories(subcategories);
+    } else {
+      setFilteredSubcategories(
+        subcategories.filter(s => selectedCategories.includes(s.mappedParent || ''))
+      );
+    }
+
+    // clear selected subcategories if not in filtered
+    setSelectedSubcategories(prev => prev.filter(sid =>
+      filteredSubcategories.some(s => s._id === sid)
+    ));
+  }, [selectedCategories, subcategories]);
+
+
+
+
   // helpers
   useEffect(() => {
     const stored = localStorage.getItem('accessToken');
@@ -772,6 +843,16 @@ export default function ProductsPage() {
   }, [router]);
 
   // fetch subcategories for dropdown
+  const fetchCategories = async () => {
+    try {
+      const res = await axiosInstance.get('/categories', { params: { limit: 1000 } }); // fetch list for dropdown
+      const items = Array.isArray(res.data.data.data) ? res.data.data.data : [];
+      setCategories(items);
+    } catch (err) {
+      console.error('fetchCategories', err);
+      setCategories([]);
+    }
+  };
   const fetchSubcategories = async () => {
     try {
       const res = await axiosInstance.get('/subcategories', { params: { limit: 1000 } }); // fetch list for dropdown
@@ -785,66 +866,87 @@ export default function ProductsPage() {
 
   // fetch products (server-side search + pagination)
   const fetchProducts = async (pageToFetch = page) => {
-    setLoading(true);
-    try {
-      const res = await axiosInstance.get('/products', {
-        params: { page: pageToFetch, limit, search: searchQuery || undefined },
-      });
-      const items = Array.isArray(res.data.data.data) ? res.data.data.data : [];
-      const pagination = res.data.data.pagination || {};
-      setProducts(items);
-      setTotalPages(pagination.totalPages || 1);
-      setTotalItems(pagination.totalItems || items.length || 0);
-    } catch (err) {
-      console.error('fetchProducts', err);
-      setProducts([]);
-      if ((err as any)?.response?.status === 401) router.push('/login');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // effects
-  useEffect(() => { fetchSubcategories(); }, []);
-  useEffect(() => { fetchProducts(page); /* eslint-disable-next-line */ }, [page, searchQuery]);
-
-  // create
-  const handleCreate = async (e?: React.FormEvent) => {
-  e?.preventDefault?.();
+  setLoading(true);
   try {
-    setLoading(true);
-    await axiosInstance.post('/products', {
-      name: formName, // required
-      mappedParent: formMappedParent || undefined, // only send if selected
-      imageUrl: formImageUrl || undefined,         // only send if not empty
-      metaTitle: formMetaTitle || undefined,
-      metaKeyword: formMetaKeyword || undefined,
-      metaDescription: formMetaDescription || undefined,
-      description: formDescription || undefined,
-    });
+    let endpoint = "/products"; // default
+    const params: any = {
+      page: pageToFetch,
+      limit,
+      search: searchQuery || undefined,
+    };
 
-    toast.success('Product created');
-    setShowAddModal(false);
+    if (selectedCategories.length > 0 || selectedSubcategories.length > 0) {
+      endpoint = "/products/filter"; // use filter route
+      // if (selectedCategories.length > 0) {
+      //   params.categories = selectedCategories.join(",");
+      // }
+      if (selectedSubcategories.length > 0) {
+        params.subcategories = selectedSubcategories.join(",");
+      }
+    }
 
-    // reset form
-    setFormName('');
-    setFormMappedParent(''); // <-- use empty string instead of null
-    setFormMetaTitle('');
-    setFormMetaKeyword('');
-    setFormMetaDescription('');
-    setFormImageUrl('');
-    setFormDescription('');
+    const res = await axiosInstance.get(endpoint, { params });
 
-    // reload
-    setPage(1);
-    fetchProducts(1);
-  } catch (err: any) {
-    console.error("Error adding product:", err.response?.data || err.message);
-    toast.error(err.response?.data?.message || "Create failed");
+    const items = Array.isArray(res.data.data.data) ? res.data.data.data : [];
+    const pagination = res.data.data.pagination || {};
+
+    console.log("vgbhjn",res.data.data.data);
+
+    setProducts(items);
+    setTotalPages(pagination.totalPages || 1);
+    setTotalItems(pagination.totalItems || items.length || 0);
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    setProducts([]);
   } finally {
     setLoading(false);
   }
 };
+
+
+
+  // effects
+  useEffect(() => { fetchSubcategories(); }, []);
+  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => { fetchProducts(page); /* eslint-disable-next-line */ }, [page, searchQuery]);
+
+  // create
+  const handleCreate = async (e?: React.FormEvent) => {
+    e?.preventDefault?.();
+    try {
+      setLoading(true);
+      await axiosInstance.post('/products', {
+        name: formName, // required
+        mappedParent: formMappedParent || undefined, // only send if selected
+        imageUrl: formImageUrl || undefined,         // only send if not empty
+        metaTitle: formMetaTitle || undefined,
+        metaKeyword: formMetaKeyword || undefined,
+        metaDescription: formMetaDescription || undefined,
+        description: formDescription || undefined,
+      });
+
+      toast.success('Product created');
+      setShowAddModal(false);
+
+      // reset form
+      setFormName('');
+      setFormMappedParent(''); // <-- use empty string instead of null
+      setFormMetaTitle('');
+      setFormMetaKeyword('');
+      setFormMetaDescription('');
+      setFormImageUrl('');
+      setFormDescription('');
+
+      // reload
+      setPage(1);
+      fetchProducts(1);
+    } catch (err: any) {
+      console.error("Error adding product:", err.response?.data || err.message);
+      toast.error(err.response?.data?.message || "Create failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // start edit
   const startEdit = (p: Product) => {
@@ -861,33 +963,33 @@ export default function ProductsPage() {
 
   // save edit
   const saveEdit = async () => {
-  if (!editingId) return;
-  try {
-    setLoading(true);
+    if (!editingId) return;
+    try {
+      setLoading(true);
 
-    const payload = {
-      name: formName,
-      mappedParent: formMappedParent || undefined, // only send if selected
-      imageUrl: formImageUrl || undefined,
-      metaTitle: formMetaTitle || undefined,
-      metaKeyword: formMetaKeyword || undefined,
-      metaDescription: formMetaDescription || undefined,
-      description: formDescription || undefined,
-    };
+      const payload = {
+        name: formName,
+        mappedParent: formMappedParent || undefined, // only send if selected
+        imageUrl: formImageUrl || undefined,
+        metaTitle: formMetaTitle || undefined,
+        metaKeyword: formMetaKeyword || undefined,
+        metaDescription: formMetaDescription || undefined,
+        description: formDescription || undefined,
+      };
 
-    await axiosInstance.put(`/products/${editingId}`, payload);
+      await axiosInstance.put(`/products/${editingId}`, payload);
 
-    toast.success("Product updated successfully!");
-    setShowEditModal(false);
-    setEditingId(null);
-    fetchProducts(page);
-  } catch (err: any) {
-    console.error("Update failed:", err.response?.data || err.message);
-    toast.error(err.response?.data?.message || "Update failed");
-  } finally {
-    setLoading(false);
-  }
-};
+      toast.success("Product updated successfully!");
+      setShowEditModal(false);
+      setEditingId(null);
+      fetchProducts(page);
+    } catch (err: any) {
+      console.error("Update failed:", err.response?.data || err.message);
+      toast.error(err.response?.data?.message || "Update failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   // delete
@@ -938,11 +1040,34 @@ export default function ProductsPage() {
 
       <main className="ml-60 p-6 md:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          {/* Header */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Products</h1>
               <p className="text-gray-500 text-sm">Create, edit and manage products (matches Subcategories UI).</p>
+
+              <FilterSidebar
+                categories={categories.map(cat => ({
+                  _id: cat._id,
+                  main_cat_name: cat.main_cat_name,
+                  subcategories: subcategories
+                    .filter(sub => sub.mappedParent === cat._id)
+                    .map(sub => ({
+                      _id: sub._id,
+                      name: sub.sub_cat_name,
+                    })),
+                }))}
+                selectedCategories={selectedCategories}
+                selectedSubcategories={selectedSubcategories}
+                setSelectedCategories={setSelectedCategories}
+                setSelectedSubcategories={setSelectedSubcategories}
+                onApply={() => fetchProducts(1)} // apply filters
+                onReset={() => {
+                  setSelectedCategories([]);
+                  setSelectedSubcategories([]);
+                  fetchProducts(1);
+                }}
+              />
+
             </div>
 
             {!isManagerViewOnly && (
@@ -983,6 +1108,7 @@ export default function ProductsPage() {
             </div>
 
             <div className="overflow-x-auto">
+
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-left text-xs uppercase text-gray-600">
                   <tr>

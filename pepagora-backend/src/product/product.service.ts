@@ -1,12 +1,18 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Product } from './product.schema';
 import { CreateProductDto } from './dto/create-product.dto';
+import { Subcategory } from '../subcategory/subcategory.schema';
+import { isValidObjectId } from 'mongoose';
+
 
 @Injectable()
 export class ProductService {
-  constructor(@InjectModel(Product.name) private productModel: Model<Product>) {}
+  constructor(
+    @InjectModel(Product.name) private productModel: Model<Product>,
+    @InjectModel(Subcategory.name) private subcategoryModel: Model<Subcategory>,
+  ) {}
 
   async create(dto: CreateProductDto) {
     const existingProduct = await this.productModel.findOne({ name: dto.name, subcategory: dto.mappedParent });
@@ -83,7 +89,39 @@ export class ProductService {
     return deleted;
   }
 
-  async findBySubcategory(subcategoryId: string) {
-    return this.productModel.find({ subcategory: subcategoryId }).exec();
+  
+
+// product.service.ts
+async findByFilters(categoryIds: string[], subcategoryIds: string[]) {
+    const query: any = {};
+    // console.log('Fetching subcategories for categories:', categoryIds);
+
+    if (categoryIds.length > 0) {
+
+      // get all subcategories belonging to these categories
+      const subcategories = await this.subcategoryModel
+        .find({ mappedParent: { $in: categoryIds.map((id) => new Types.ObjectId(id)) } })
+        .select('_id')
+        .exec();
+
+      const subIdsFromCategories = subcategories.map((s) => s._id);
+
+      // merge explicit subcategories with those found via categories
+      const finalSubIds =
+        subcategoryIds.length > 0
+          ? [...new Set([...subIdsFromCategories.map((id: Types.ObjectId) => id.toString()), ...subcategoryIds])]
+          : subIdsFromCategories;
+
+      query.mappedParent = { $in: finalSubIds };
+    } else if (subcategoryIds.length > 0) {
+      query.mappedParent = { $in: subcategoryIds.map((id) => new Types.ObjectId(id)) };
+    }
+
+    // ✅ finally return products with populated subcategory
+    const ans=await this.productModel.find(query).exec();
+
+    // console.log('Fetched products:',ans);
+    return ans;
+    }
+  
   }
-}

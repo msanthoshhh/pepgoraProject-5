@@ -8,6 +8,6 @@ import { SubcategoryService } from './subcategory.service';
   imports: [MongooseModule.forFeature([{ name: Subcategory.name, schema: SubcategorySchema }])],
   controllers: [SubcategoryController],
   providers: [SubcategoryService],
-  exports: [SubcategoryService],
+  exports: [SubcategoryService,MongooseModule],
 })
 export class SubcategoryModule {}

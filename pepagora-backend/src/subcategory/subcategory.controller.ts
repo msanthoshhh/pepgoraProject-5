@@ -21,6 +21,8 @@ import {
 
 import { HttpStatus, HttpCode, Query } from '@nestjs/common';
 
+import { BadRequestException } from '@nestjs/common';
+
 @Controller('subcategories')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SubcategoryController {
@@ -46,6 +48,16 @@ async findAllCount() {
     count,
   };
 }
+
+// subcategory.controller.ts
+@Get('filter')
+async getSubcategories(@Query('categories') categories: string) {
+  if (!categories) throw new BadRequestException('Category(s) required');
+  const categoryIds = categories.split(',');
+  return this.subcategoryService.findByCategories(categoryIds);
+}
+
+
 
   
   @Get()
@@ -94,8 +106,5 @@ async findAllCount() {
     return this.subcategoryService.remove(id);
   }
 
-  @Get('by-category/:categoryId')
-  findByCategory(@Param('categoryId') categoryId: string) {
-    return this.subcategoryService.findByCategory(categoryId);
-  }
+ 
 }

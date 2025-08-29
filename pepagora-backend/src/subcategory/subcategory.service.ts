@@ -25,6 +25,12 @@ export class SubcategoryService {
   return await this.subcategoryModel.countDocuments().exec();
 }
 
+// subcategory.service.ts
+async findByCategories(categoryIds: string[]) {
+  return this.subcategoryModel.find({ mappedParent: { $in: categoryIds } }).exec();
+}
+
+
   // async findAll() {
   //   return this.subcategoryModel.find().populate('category').exec();
   // }
@@ -83,7 +89,4 @@ export class SubcategoryService {
     return subcategory;
   }
 
-  async findByCategory(categoryId: string) {
-    return this.subcategoryModel.find({ category: categoryId }).exec();
-  }
 }

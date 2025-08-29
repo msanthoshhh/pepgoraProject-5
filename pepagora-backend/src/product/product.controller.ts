@@ -69,28 +69,57 @@ async findAllCount() {
         },
       };
     }
+
+  
+
     
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(id);
-  }
-
-  @Put(':id')
-  @Roles('admin', 'pepagora_manager', 'category_manager')
-  // @UsePipes(new ZodValidationPipe(createProductSchema))
-  update(@Param('id') id: string, @Body() dto: CreateProductDto) {
-    return this.productService.update(id, dto);
-  }
-
+    
+    @Put(':id')
+    @Roles('admin', 'pepagora_manager', 'category_manager')
+    // @UsePipes(new ZodValidationPipe(createProductSchema))
+    update(@Param('id') id: string, @Body() dto: CreateProductDto) {
+      return this.productService.update(id, dto);
+    }
+    
   @Delete(':id')
   @Roles('admin', 'pepagora_manager', 'category_manager')
   remove(@Param('id') id: string) {
     return this.productService.remove(id);
   }
 
-  @Get("by-subcategory/:subcategoryId")
-  findBySubcategory(@Param('subcategoryId') subcategoryId: string) {
-    return this.productService.findBySubcategory(subcategoryId);
-  }
+  // product.controller.ts
+  @Get('filter')
+  async getProducts(
+    @Query('categories') categories: string,
+    @Query('subcategories') subcategories: string,
+) {
+
+  console.log('Controller reached /products/filter ✅');
+  
+  const categoryIds = categories ? categories.split(',') : [];
+  const subcategoryIds = subcategories ? subcategories.split(',') : [];
+  
+  console.log('Controller received categories:', categoryIds);
+  console.log('Controller received subcategories:', subcategoryIds);
+  const data = await this.productService.findByFilters(categoryIds, subcategoryIds);
+
+  console.log('Controller fetched products:', data);
+  return {
+        statusCode: HttpStatus.OK,
+        message: 'Products fetched successfully',
+        data,
+        pagination: {
+          page: 1,
+          limit: 10,
+          totalCount: data.length,
+          totalPages: Math.ceil(data.length / 10),
+        },
+      };
+}
+
+// @Get(':id')
+// findOne(@Param('id') id: string) {
+//   return this.productService.findOne(id);
+// }
 }
